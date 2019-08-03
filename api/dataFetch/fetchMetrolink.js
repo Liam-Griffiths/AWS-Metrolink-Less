@@ -114,6 +114,20 @@ module.exports.fetchMetrolink = (event, context, callback) => {
     function checkSpelling(inputArr){
         var outputArr = [];
 
+        array.forEach(element => {
+            const originalStr = element;
+            var cleanStr = element;
+
+            
+
+            const check = spell.check(element);
+            cleanMistakes = spellCheckNormalise(check);
+            if(cleanMistakes.length > 0)
+            {
+                outputArr.push({message: originalStr, mistakes: cleanMistakes});
+            }
+        });
+
         return outputArr;
     }
 
