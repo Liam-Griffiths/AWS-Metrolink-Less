@@ -1,0 +1,16 @@
+{
+  "name": "aws-metrolink-less",
+  "version": "0.0.1",
+  "description": "AWS SAM Metrolink Times",
+  "dependencies": {
+    "bluebird": "^3.5.5",
+    "node-fetch": "^2.6.0",
+    "spell-checker-js": "^1.2.6",
+    "uuid": "^3.3.2"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "deploy": "serverless deploy"
+  },
+  "author": "Liam"
+}
