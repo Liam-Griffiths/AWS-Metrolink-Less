@@ -118,9 +118,11 @@ module.exports.fetchMetrolink = (event, context, callback) => {
             const originalStr = element;
             var cleanStr = element;
 
-            
+            cleanStr = cleanStr.replace(/\b\#\w+/g, ''); // remove hashtags
+            cleanStr = cleanStr.replace(/\B@[a-z0-9_-]+/gi, ''); // remove twitter @'s
+            cleanStr = cleanStr.replace(/(?:https?|ftp):\/\/[\n\S]+/g, ''); // remove urls
 
-            const check = spell.check(element);
+            const check = spell.check(cleanStr);
             cleanMistakes = spellCheckNormalise(check);
             if(cleanMistakes.length > 0)
             {
