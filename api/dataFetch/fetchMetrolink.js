@@ -41,14 +41,6 @@ module.exports.fetchMetrolink = (event, context, callback) => {
                         break;
                     }
                 }
-
-                // Quickly search if the message string has already been added to the list.
-                for(var i = 0; i < msgArr.length; i++) {
-                    if(msgArr[i] === element.MessageBoard) {
-                        nameIndex = i;
-                        break;
-                    }
-                }
                 
                 if(nameIndex == -1){
 
@@ -88,9 +80,29 @@ module.exports.fetchMetrolink = (event, context, callback) => {
 
                 }
 
+                // Quickly search if the message string has already been added to the list.
+                if(element.MessageBoard != "<no message>")
+                {
+                    var msgIndex = -1;
+                    for(var i = 0; i < msgArr.length; i++) {
+                        if(msgArr[i] === element.MessageBoard) {
+                            msgIndex = i;
+                            break;
+                        }
+                    }
+
+                    if(msgIndex == -1)
+                    {
+                        msgArr.push(element.MessageBoard)
+                    }
+                }
+
             });
 
-            lambdaComplete(dbArr);
+            mistakesArr = checkSpelling(msgArr);
+
+            var returnArr = {stopData: dbArr, msgData: msgArr, mistakeData: mistakesArr};
+            lambdaComplete(returnArr);
 
         } catch (error) {
 
@@ -99,11 +111,10 @@ module.exports.fetchMetrolink = (event, context, callback) => {
         }
     })();
 
-    function checkSpelling(inputStr){
-        if(inputStr != "")
-        {
+    function checkSpelling(inputArr){
+        var outputArr = [];
 
-        }
+        return outputArr;
     }
 
     function spellCheckNormalise(inputArr = [])
@@ -137,12 +148,21 @@ module.exports.fetchMetrolink = (event, context, callback) => {
                 didMatch = true;
             }
 
+            for(var i = 0; i < exceptionsArr.length; i++) {
+                if(exceptionsArr[i] === element) {
+                    didMatch = true;
+                    break;
+                }
+            }
+
 
             if(didMatch == false)
             {
                 outputArr.push(element);
             }
         });
+
+        return outputArr;
     }
 
     function lambdaComplete(responseMsg = "undefined") {
