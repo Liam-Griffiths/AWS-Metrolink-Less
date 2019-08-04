@@ -9,8 +9,6 @@ AWS.config.setPromisesDependency(require('bluebird'));
 
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
-spell.load('en');
-
 module.exports.fetchMetrolink = (event, context, callback) => {
     
     (async () => {
@@ -52,8 +50,6 @@ module.exports.fetchMetrolink = (event, context, callback) => {
                             dueTrams.push({destination: element['Dest' + x], carriages: element['Carriages' + x], status: element['Status' + x], wait: element['Wait' + x]})
                         }
                     }
-
-                    checkSpelling(element.MessageBoard);
 
                     dbArr.push({  
                         name: element.StationLocation, 
@@ -106,24 +102,27 @@ module.exports.fetchMetrolink = (event, context, callback) => {
 
         } catch (error) {
 
-            callback(null, { statusCode: 400, body: JSON.stringify(error) });
+           callback(null, { statusCode: 500, body: JSON.stringify(error) });
 
         }
     })();
 
-    function checkSpelling(inputArr){
+    function checkSpelling(inputArr = []){
         var outputArr = [];
 
-        array.forEach(element => {
+        spell.load('en');
+
+        inputArr.forEach(element => {
             const originalStr = element;
             var cleanStr = element;
 
             cleanStr = cleanStr.replace(/\b\#\w+/g, ''); // remove hashtags
             cleanStr = cleanStr.replace(/\B@[a-z0-9_-]+/gi, ''); // remove twitter @'s
             cleanStr = cleanStr.replace(/(?:https?|ftp):\/\/[\n\S]+/g, ''); // remove urls
+            cleanStr = cleanStr.replace(/(\d+)(?:st|nd|rd|th)/, '')
 
             const check = spell.check(cleanStr);
-            cleanMistakes = spellCheckNormalise(check);
+            var cleanMistakes = spellCheckNormalise(check);
             if(cleanMistakes.length > 0)
             {
                 outputArr.push({message: originalStr, mistakes: cleanMistakes});
@@ -145,7 +144,10 @@ module.exports.fetchMetrolink = (event, context, callback) => {
             "MCRMetrolink",
             "mcrmetrolink",
             "MCR",
-            "mcr"
+            "mcr",
+            "www",
+            "metrolink",
+            "uk"
         ];
 
         inputArr.forEach(element => {
@@ -164,13 +166,18 @@ module.exports.fetchMetrolink = (event, context, callback) => {
                 didMatch = true;
             }
 
+            // Match fully capitalised eg. "ROCHDALE"
+            if(element.startsWith("F0"))
+            {
+                didMatch = true;
+            }
+
             for(var i = 0; i < exceptionsArr.length; i++) {
                 if(exceptionsArr[i] === element) {
                     didMatch = true;
                     break;
                 }
             }
-
 
             if(didMatch == false)
             {

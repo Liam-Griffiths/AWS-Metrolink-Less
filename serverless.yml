@@ -2,6 +2,9 @@ service: metrolink-less
 
 frameworkVersion: ">=1.1.0 <2.0.0"
 
+plugins:
+  - serverless-offline
+
 provider:
   name: aws
   runtime: nodejs10.x
@@ -34,7 +37,7 @@ functions:
 
   FetchMetrolink:
     handler: api/dataFetch/fetchMetrolink.fetchMetrolink
-    memorySize: 128
+    memorySize: 256
     description: Fetch Metrolink data and store in a database.
     events:
       - http: 

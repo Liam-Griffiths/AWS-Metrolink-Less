@@ -3,12 +3,16 @@
   "version": "0.0.1",
   "description": "AWS SAM Metrolink Times",
   "dependencies": {
+    "aws-sdk": "^2.503.0",
     "bluebird": "^3.5.5",
     "node-fetch": "^2.6.0",
     "spell-checker-js": "^1.2.6",
+    "twitter": "^1.7.1",
     "uuid": "^3.3.2"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "serverless-offline": "^5.8.0"
+  },
   "scripts": {
     "deploy": "serverless deploy"
   },
