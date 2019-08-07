@@ -1,7 +1,7 @@
 {
   "name": "aws-metrolink-less",
   "version": "0.0.1",
-  "description": "AWS SAM Metrolink Times",
+  "description": "AWS Serverless Framework - Metrolink Times",
   "dependencies": {
     "aws-sdk": "^2.503.0",
     "bluebird": "^3.5.5",

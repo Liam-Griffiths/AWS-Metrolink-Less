@@ -10,16 +10,11 @@ provider:
   runtime: nodejs10.x
   stage: dev
   region: eu-west-2
-  environment:
-    CANDIDATE_TABLE: ${self:service}-${opt:stage, self:provider.stage}
-    CANDIDATE_EMAIL_TABLE: "candidate-email-${opt:stage, self:provider.stage}"
+
   iamRoleStatements:
-    - Effect: Allow
+    - Effect: "Allow"
       Action:
-        - dynamodb:Query
-        - dynamodb:Scan
-        - dynamodb:GetItem
-        - dynamodb:PutItem
+        - "*"
       Resource: "*"
 
 functions:
@@ -40,29 +35,36 @@ functions:
     memorySize: 256
     description: Fetch Metrolink data and store in a database.
     events:
-      - http: 
-          path: '/fetchMetro'
-          method: get
-      - http: 
-          path: '/fetchMetro'
-          method: post
+      - schedule:
+          rate: rate(8 minutes)
+          enable: true
 
-resources:
-  Resources:
-    CandidatesDynamoDbTable:
-      Type: 'AWS::DynamoDB::Table'
-      Properties:
-        AttributeDefinitions:
-          -
-            AttributeName: "id"
-            AttributeType: "S"   
-        KeySchema:
-          -
-            AttributeName: "id"
-            KeyType: "HASH"
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
-        StreamSpecification:
-          StreamViewType: "NEW_AND_OLD_IMAGES"
-        TableName: ${self:provider.environment.CANDIDATE_TABLE}
+  FetchMistakes:
+    handler: api/dataFetch/fetchMistakes.fetchMistakes
+    memorySize: 256
+    description: Fetch spelling mistakes on the info boards, tweet it out.
+    events:
+      - http: 
+          path: '/fetchMistakes'
+          method: get
+
+  GetStopNames:
+    handler: api/publicData/getStopNames.getStopNames
+    memorySize: 128
+    description: Get Names
+    events:
+      - http: 
+          path: '/stopNames'
+          method: get
+
+
+  GetStopData:
+    handler: api/publicData/getStopData.getStopData
+    memorySize: 128
+    description: Get Data
+    events:
+      - http: 
+          path: '/stopData/{name}'
+          method: get
+
+        

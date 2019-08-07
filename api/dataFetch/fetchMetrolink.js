@@ -1,31 +1,32 @@
 'use strict';
 
 const fetch = require("node-fetch");
-const uuid = require('uuid');
-const AWS = require('aws-sdk'); 
-const spell = require('spell-checker-js');
+const AWS = require('aws-sdk');
 
 AWS.config.setPromisesDependency(require('bluebird'));
 
-const dynamoDb = new AWS.DynamoDB.DocumentClient();
+const dynamoDb = new AWS.DynamoDB();
+const dynamoDbDocu = new AWS.DynamoDB.DocumentClient();
 
 module.exports.fetchMetrolink = (event, context, callback) => {
-    
+
     (async () => {
         try {
 
+            createTables()
+
             const url = 'https://api.tfgm.com/odata/Metrolinks';
             const headers = {
-                'Ocp-Apim-Subscription-Key' : '52e6831532a445fe921f5fcbb9c3696d'
+                'Ocp-Apim-Subscription-Key': '52e6831532a445fe921f5fcbb9c3696d'
             }
 
-            const response = await fetch(url, {headers: headers});
+            const response = await fetch(url, { headers: headers });
             const json = await response.json();
 
             // stopName, dueTrams[], infoMsg
             var dbArr = [];
             var msgArr = [];
-            var mistakesArr = [];
+            var nameStrArr = [];
 
             json.value.forEach(element => {
 
@@ -33,171 +34,160 @@ module.exports.fetchMetrolink = (event, context, callback) => {
 
                 // Quickly search if the stop data has already been added to the list.
                 var nameIndex = -1
-                for(var i = 0; i < dbArr.length; i++) {
-                    if(dbArr[i].name === element.StationLocation) {
+                for (var i = 0; i < dbArr.length; i++) {
+                    if (dbArr[i].name === element.StationLocation) {
                         nameIndex = i;
                         break;
                     }
                 }
-                
-                if(nameIndex == -1){
 
-                    //dbArr.push({name: element.StationLocation});
+                if (nameIndex == -1) {
 
-                    for(var x = 0; x < 4; x++) {
-                        if(element['Dest' + x] != "")
-                        {
-                            dueTrams.push({destination: element['Dest' + x], carriages: element['Carriages' + x], status: element['Status' + x], wait: element['Wait' + x]})
+                    nameStrArr.push(element.StationLocation);
+
+                    for (var x = 0; x < 4; x++) {
+                        if (element['Dest' + x] != "") {
+                            dueTrams.push({ destination: element['Dest' + x], carriages: element['Carriages' + x], status: element['Status' + x], wait: element['Wait' + x] })
                         }
                     }
 
-                    dbArr.push({  
-                        name: element.StationLocation, 
-                        due: dueTrams, 
+                    dueTrams.sort(dynamicSort("wait"));
+
+                    dbArr.push({
+                        name: element.StationLocation,
+                        due: dueTrams,
                         infoMsg: element.MessageBoard
                     });
 
                 }
-                else{
+                else {
 
-                    for(var x = 0; x < 4; x++) {
-                        if(element['Dest' + x] != "")
-                        {
+                    for (var x = 0; x < 4; x++) {
+                        if (element['Dest' + x] != "") {
                             dueTrams.push({
-                                destination: element['Dest' + x], 
-                                carriages: element['Carriages' + x], 
-                                status: element['Status' + x], 
+                                destination: element['Dest' + x],
+                                carriages: element['Carriages' + x],
+                                status: element['Status' + x],
                                 wait: element['Wait' + x]
                             })
                         }
                     }
 
                     dbArr[nameIndex].due = dbArr[nameIndex].due.concat(dueTrams);
+                    dbArr[nameIndex].due.sort(dynamicSort("wait"));
 
                 }
 
                 // Quickly search if the message string has already been added to the list.
-                if(element.MessageBoard != "<no message>")
-                {
+                if (element.MessageBoard != "<no message>") {
                     var msgIndex = -1;
-                    for(var i = 0; i < msgArr.length; i++) {
-                        if(msgArr[i] === element.MessageBoard) {
+                    for (var i = 0; i < msgArr.length; i++) {
+                        if (msgArr[i] === element.MessageBoard) {
                             msgIndex = i;
                             break;
                         }
                     }
 
-                    if(msgIndex == -1)
-                    {
+                    if (msgIndex == -1) {
                         msgArr.push(element.MessageBoard)
                     }
                 }
 
+
             });
 
-            mistakesArr = checkSpelling(msgArr);
+            for (var ind = 0; ind < dbArr.length; ind++) {
 
-            var returnArr = {stopData: dbArr, msgData: msgArr, mistakeData: mistakesArr};
-            lambdaComplete(returnArr);
+                var updateParams = {
+                    TableName: "Tramstops",
+                    Item: {
+                        "name": dbArr[ind].name,
+                        "data": JSON.stringify(dbArr[ind].due),
+                        "infoMsg": dbArr[ind].infoMsg,
+                        "fetchTime": Date.now()
+                    }
+                }
+                putToTable(updateParams);
+            }
+
+            var updateNames = {
+                TableName: "Tramstops",
+                Item: {
+                    "name": "STOP_LIST",
+                    "data": JSON.stringify(nameStrArr),
+                }
+            }
+            putToTable(updateNames);
+
+            var returnObj = { stopData: dbArr, msgData: msgArr };
+
+            callback(null, { statusCode: 200, body: JSON.stringify(returnObj) });
 
         } catch (error) {
 
-           callback(null, { statusCode: 500, body: JSON.stringify(error) });
+            callback(null, { statusCode: 500, body: JSON.stringify(error) });
 
         }
     })();
 
-    function checkSpelling(inputArr = []){
-        var outputArr = [];
-
-        spell.load('en');
-
-        inputArr.forEach(element => {
-            const originalStr = element;
-            var cleanStr = element;
-
-            cleanStr = cleanStr.replace(/\b\#\w+/g, ''); // remove hashtags
-            cleanStr = cleanStr.replace(/\B@[a-z0-9_-]+/gi, ''); // remove twitter @'s
-            cleanStr = cleanStr.replace(/(?:https?|ftp):\/\/[\n\S]+/g, ''); // remove urls
-            cleanStr = cleanStr.replace(/(\d+)(?:st|nd|rd|th)/, '')
-
-            const check = spell.check(cleanStr);
-            var cleanMistakes = spellCheckNormalise(check);
-            if(cleanMistakes.length > 0)
-            {
-                outputArr.push({message: originalStr, mistakes: cleanMistakes});
+    function dynamicSort(property) {
+        var sortOrder = 1;
+        if (property[0] === "-") {
+            sortOrder = -1;
+            property = property.substr(1);
+        }
+        return function (a, b) {
+            if (isNumeric(a[property])) {
+                a[property] = parseInt(a[property]);
+                b[property] = parseInt(b[property]);
             }
-        });
-
-        return outputArr;
+            var result = (a[property] < b[property]) ? -1 : (a[property] > b[property]) ? 1 : 0;
+            return result * sortOrder;
+        }
     }
 
-    function spellCheckNormalise(inputArr = [])
-    {
-        var outputArr = [];
-
-        var exceptionsArr = [
-            "-",
-            "tfgm",
-            "TFGM",
-            "TfGM",
-            "MCRMetrolink",
-            "mcrmetrolink",
-            "MCR",
-            "mcr",
-            "www",
-            "metrolink",
-            "uk"
-        ];
-
-        inputArr.forEach(element => {
-
-            var didMatch = false;
-
-            // Match initial capitalised eg. "Rochdale"
-            if(element.match(/^[A-Z][a-z][A-Za-z]*$/))
-            {
-                didMatch = true;
-            }
-
-            // Match fully capitalised eg. "ROCHDALE"
-            if(element.match(/\b[A-Z]+\b/g))
-            {
-                didMatch = true;
-            }
-
-            // Match fully capitalised eg. "ROCHDALE"
-            if(element.startsWith("F0"))
-            {
-                didMatch = true;
-            }
-
-            for(var i = 0; i < exceptionsArr.length; i++) {
-                if(exceptionsArr[i] === element) {
-                    didMatch = true;
-                    break;
-                }
-            }
-
-            if(didMatch == false)
-            {
-                outputArr.push(element);
-            }
-        });
-
-        return outputArr;
+    function isNumeric(n) {
+        return !isNaN(parseFloat(n)) && isFinite(n);
     }
 
-    function lambdaComplete(responseMsg = "undefined") {
+    function putToTable(updateParams) {
+        dynamoDbDocu.put(updateParams, (error) => {
+            // handle potential errors
+            if (error) {
+                console.error(error);
+                callback(null, {
+                    statusCode: error.statusCode || 501,
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: "Didn't go so well cap'.",
+                });
+                return;
+            }
+        });
+    }
 
-        const response = {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: responseMsg
-            }),
+    function createTables() {
+// change to per req strat
+        var params = {
+            TableName: "Tramstops",
+            KeySchema: [
+                { AttributeName: "name", KeyType: "HASH" }  //Partition key
+            ],
+            AttributeDefinitions: [
+                { AttributeName: "name", AttributeType: "S" }
+            ],
+            ProvisionedThroughput: {
+                ReadCapacityUnits: 10,
+                WriteCapacityUnits: 10
+            }
         };
 
-        callback(null, response);
+        dynamoDb.createTable(params, function (err, data) {
+            if (err) {
+                console.error("Unable to create table. Error JSON:", JSON.stringify(err, null, 2));
+            } else {
+                console.log("Created table. Table description JSON:", JSON.stringify(data, null, 2));
+            }
+        });
     }
 
 };
