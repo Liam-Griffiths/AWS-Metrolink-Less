@@ -35,8 +35,11 @@ functions:
     memorySize: 256
     description: Fetch Metrolink data and store in a database.
     events:
+      - http: 
+          path: '/fetchMetro'
+          method: get
       - schedule:
-          rate: rate(8 minutes)
+          rate: rate(4 minutes)
           enable: true
 
   FetchMistakes:
@@ -56,6 +59,7 @@ functions:
       - http: 
           path: '/stopNames'
           method: get
+          cors: true
 
 
   GetStopData:
@@ -66,5 +70,22 @@ functions:
       - http: 
           path: '/stopData/{name}'
           method: get
+          cors: true
 
+# resources: # CloudFormation template syntax
+#   Resources:
+#     Tramstops:
+#       Type: AWS::DynamoDB::Table
+#       DeletionPolicy: Retain
+#       Properties:
+#         TableName: Tramstops
+#         AttributeDefinitions:
+#           - AttributeName: name
+#             AttributeType: S
+#         KeySchema:
+#           - AttributeName: name
+#             KeyType: HASH
+#         ProvisionedThroughput:
+#           ReadCapacityUnits: 1
+#           WriteCapacityUnits: 1
         

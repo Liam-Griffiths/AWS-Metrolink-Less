@@ -16,9 +16,14 @@ module.exports.getStopNames = (event, context, callback) => {
 
             docClient.get(params, function (err, data) {
                 if (err) {
-                    callback(null, { statusCode: 500, body: JSON.stringify({status: "error", message:"something went wrong", data: err}) });
+                    callback(null, { statusCode: 500, body: JSON.stringify({ status: "error", message: "something went wrong", data: err }) });
                 } else {
-                    callback(null, { statusCode: 200, body: JSON.stringify({status: "success", message:"", data: data.Item}) });
+                    data.Item.data = JSON.parse(data.Item.data);
+                    callback(null, {
+                        statusCode: 200,
+                        headers: { "Access-Control-Allow-Origin": "*" },
+                        body: JSON.stringify({ status: "success", message: "", data: data.Item })
+                    });
                 }
             });
         } catch (error) {

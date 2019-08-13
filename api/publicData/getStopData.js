@@ -7,16 +7,19 @@ module.exports.getStopData = (event, context, callback) => {
     (async () => {
         try {
 
+            inputStr = event['pathParameters']['name'];
+            inputStr = inputStr.replace(/%20/g, " ");
+
             var params = {
                 TableName: "Tramstops",
                 Key: {
-                    "name": event['pathParameters']['name']
+                    "name": inputStr
                 }
             };
 
             docClient.get(params, function (err, data) {
                 if (err) {
-                    callback(null, { statusCode: 500, body: JSON.stringify({ status: "error", message: "nothing found", data: null }) });
+                    callback(null, { statusCode: 500, body: JSON.stringify({ status: "error", message: "nothing found", data: [] }) });
                 } else {
 
                     var stopData = JSON.parse(data.Item.data);
@@ -31,17 +34,17 @@ module.exports.getStopData = (event, context, callback) => {
                     stopData.forEach(element => {
 
                         var waitMins = +element.wait;
-                        var waitMins = (waitMins - diffMins) - 1;
+                        var waitMins = (waitMins - diffMins);
                         var waitSecs = 60 - diffSecs;
 
-                        if (waitMins < 0) {
+                        if (waitMins < -1) {
                             if (element.status = "Due") {
-                                element.status = "Departed";
+                                element.status = "Due to Depart";
                             }
                             element.wait = waitMins;
                             element.seconds = 0;
                         }
-                        else if (waitMins == 0) {
+                        else if (waitMins <= 0) {
                             if (element.status = "Due") {
                                 element.status = "Due Now";
                             }
@@ -54,7 +57,11 @@ module.exports.getStopData = (event, context, callback) => {
 
                     });
                     data.Item.data = stopData;
-                    callback(null, { statusCode: 200, body: JSON.stringify({ status: "success", message: "success", data: data }) });
+                    callback(null, {
+                        statusCode: 200,
+                        headers: { "Access-Control-Allow-Origin": "*" },
+                        body: JSON.stringify({ status: "success", message: "success", data: data.Item })
+                    });
                 }
             });
         } catch (error) {

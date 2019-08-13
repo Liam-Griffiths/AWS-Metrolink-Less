@@ -67,7 +67,7 @@ module.exports.fetchMistakes = (event, context, callback) => {
 
             // run spellchecker
             const check = spell.check(cleanStr);
-            
+
             var cleanMistakes = spellCheckNormalise(check);
             if (cleanMistakes.length > 0) {
                 outputArr.push({ message: originalStr, mistakes: cleanMistakes });
@@ -96,18 +96,21 @@ module.exports.fetchMistakes = (event, context, callback) => {
             "Gdns",
             "gdns",
             "picc",
-            "vic"
+            "vic",
+            "contactless"
         ];
 
         inputArr.forEach(element => {
 
             var didMatch = false;
 
-            if (element.match(/^[A-Z][a-z][A-Za-z]*$/)) { // looking for words that look like proper nouns. "Rochdale"
+            if (element.match(/^[A-Z][a-z][A-Za-z]*$/)){ // looking for words that look like proper nouns. "Rochdale"
                 didMatch = true;
-            } else if (element.match(/\b[A-Z]+\b/g)) { // looking for all caps words. "ROCHDALE"
+            } else if (element.match(/\b[A-Z]+\b/g)){ // looking for all caps words. "ROCHDALE" (?:\d+[a-z]|[a-z]+\d)[a-z\d]*
                 didMatch = true;
-            } else if (element.startsWith("F0")) {
+            } else if (element.match(/(?:\d+[a-z]|[a-z]+\d)[a-z\d]*/)){ // looking for bus numbers "41a"
+                didMatch = true;
+            } else if (element.startsWith("F0")){
                 didMatch = true;
             } else if (isNumeric(element)) {
                 didMatch = true;

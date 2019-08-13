@@ -13,7 +13,7 @@ module.exports.fetchMetrolink = (event, context, callback) => {
     (async () => {
         try {
 
-            createTables()
+            createTables();
 
             const url = 'https://api.tfgm.com/odata/Metrolinks';
             const headers = {
@@ -93,7 +93,14 @@ module.exports.fetchMetrolink = (event, context, callback) => {
                     }
                 }
 
-
+                var uniqueArray = dueTrams.reduce((unique, o) => {
+                    if(!unique.some(obj => obj.destination === o.destination && obj.wait === o.wait)) {
+                      unique.push(o);
+                    }
+                    return unique;
+                },[]);
+                
+                dueTrams = uniqueArray;
             });
 
             for (var ind = 0; ind < dbArr.length; ind++) {
@@ -109,6 +116,8 @@ module.exports.fetchMetrolink = (event, context, callback) => {
                 }
                 putToTable(updateParams);
             }
+
+            nameStrArr.sort();
 
             var updateNames = {
                 TableName: "Tramstops",
@@ -166,7 +175,7 @@ module.exports.fetchMetrolink = (event, context, callback) => {
     }
 
     function createTables() {
-// change to per req strat
+        // change to per req strat
         var params = {
             TableName: "Tramstops",
             KeySchema: [
