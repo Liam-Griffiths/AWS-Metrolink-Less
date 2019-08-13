@@ -8,7 +8,7 @@ module.exports.getStopData = (event, context, callback) => {
         try {
 
             inputStr = event['pathParameters']['name'];
-            inputStr = inputStr.replace(/%20/g, " ");
+            inputStr = decodeURI(inputStr);
 
             var params = {
                 TableName: "Tramstops",
