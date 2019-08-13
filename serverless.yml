@@ -61,6 +61,15 @@ functions:
           method: get
           cors: true
 
+  GetNetworkMsgs:
+    handler: api/publicData/getNetworkMsgs.getNetworkMsgs
+    memorySize: 128
+    description: Get NetworkMsgs
+    events:
+      - http: 
+          path: '/networkMsgs'
+          method: get
+          cors: true
 
   GetStopData:
     handler: api/publicData/getStopData.getStopData

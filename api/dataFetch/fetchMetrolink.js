@@ -127,6 +127,15 @@ module.exports.fetchMetrolink = (event, context, callback) => {
             }
             putToTable(updateNames);
 
+            var updateNames = {
+                TableName: "Tramstops",
+                Item: {
+                    "name": "MSG_LIST",
+                    "data": JSON.stringify(msgArr),
+                }
+            }
+            putToTable(updateNames);
+
             var returnObj = { stopData: dbArr, msgData: msgArr };
 
             callback(null, { statusCode: 200, body: JSON.stringify(returnObj) });
