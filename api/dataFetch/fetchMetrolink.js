@@ -28,7 +28,7 @@ module.exports.fetchMetrolink = (event, context, callback) => {
             var msgArr = [];
             var nameStrArr = [];
 
-            json.value.forEach(element => {
+            json.value.forEach(element => {``
 
                 var dueTrams = [];
 
@@ -76,6 +76,14 @@ module.exports.fetchMetrolink = (event, context, callback) => {
                     dbArr[nameIndex].due = dbArr[nameIndex].due.concat(dueTrams);
                     dbArr[nameIndex].due.sort(dynamicSort("wait"));
 
+                    var uniqueArray = dbArr[nameIndex].due.reduce((unique, o) => {
+                        if(!unique.some(obj => obj.destination === o.destination && obj.wait === o.wait)) {
+                          unique.push(o);
+                        }
+                        return unique;
+                    },[]);
+
+                    dbArr[nameIndex].due = uniqueArray;
                 }
 
                 // Quickly search if the message string has already been added to the list.
@@ -92,15 +100,6 @@ module.exports.fetchMetrolink = (event, context, callback) => {
                         msgArr.push(element.MessageBoard)
                     }
                 }
-
-                var uniqueArray = dueTrams.reduce((unique, o) => {
-                    if(!unique.some(obj => obj.destination === o.destination && obj.wait === o.wait)) {
-                      unique.push(o);
-                    }
-                    return unique;
-                },[]);
-                
-                dueTrams = uniqueArray;
             });
 
             for (var ind = 0; ind < dbArr.length; ind++) {
