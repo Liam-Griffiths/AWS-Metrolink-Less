@@ -34,7 +34,7 @@ module.exports.getStopData = (event, context, callback) => {
                     stopData.forEach(element => {
 
                         var waitMins = +element.wait;
-                        var waitMins = (waitMins - diffMins);
+                        var waitMins = (waitMins - diffMins) - 1;
                         var waitSecs = 60 - diffSecs;
 
                         if (waitMins < -1) {
