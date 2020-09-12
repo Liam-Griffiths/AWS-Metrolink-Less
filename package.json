@@ -5,7 +5,7 @@
   "dependencies": {
     "aws-sdk": "^2.503.0",
     "bluebird": "^3.5.5",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "spell-checker-js": "^1.2.6",
     "twitter": "^1.7.1",
     "uuid": "^3.3.2"
